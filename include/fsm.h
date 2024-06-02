@@ -57,7 +57,7 @@ typedef enum {
 typedef struct {
 	fsm_event_val_t *val;
 	bool pol;
-} system_event_t;
+} fsm_event_t;
 
 typedef void (*fsm_action_t)(void);
 
