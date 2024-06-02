@@ -64,7 +64,7 @@ typedef void (*fsm_action_t)(void);
 typedef struct {
 	int present_state;
 	int next_state;
-	system_event_t event[CONFIG_FSM_EVENTS_NUM];
+	fsm_event_t event[CONFIG_FSM_EVENTS_NUM];
 	fsm_action_t action;
 } fsm_row_t;
 
