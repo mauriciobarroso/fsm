@@ -69,7 +69,7 @@ void fsm_run(fsm_t *const me)
 		if (row.present_state == me->current_state) {
 			bool condition = true;
 			for (uint8_t j = 0; j < CONFIG_FSM_EVENTS_NUM; j++) {
-				system_event_t event = row.event[j];
+				fsm_event_t event = row.event[j];
 				if (event.val != NULL) {
 					if (*event.val != FSM_EVENT_VAL_NA) {
 						bool val = event.pol ? *event.val : !(*event.val);
