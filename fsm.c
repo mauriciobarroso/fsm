@@ -73,7 +73,16 @@ void fsm_run(fsm_t *const me)
 				if (event.val != NULL) {
 					if (*event.val != FSM_EVENT_VAL_NA) {
 						bool val = event.pol ? *event.val : !(*event.val);
-						condition &= val;
+
+						if (row.cond == FSM_COND_AND) {
+							condition &= val;
+						}
+						else if (row.cond == FSM_COND_OR) {
+							condition |= val;
+						}
+						else {
+
+						}
 					}
 					else {
 						condition = false;

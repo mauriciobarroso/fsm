@@ -52,7 +52,14 @@ typedef enum {
 	FSM_EVENT_VAL_NA = -1,
 	FSM_EVENT_VAL_CLEAR = 0,
 	FSM_EVENT_VAL_SET = 1,
+	FSM_EVENT_VAL_MAX,
 } fsm_event_val_t;
+
+typedef enum {
+	FSM_COND_OR = 0,
+	FSM_COND_AND,
+	FSM_COND_MAX
+} fsm_cond_t;
 
 typedef struct {
 	fsm_event_val_t *val;
@@ -65,6 +72,7 @@ typedef struct {
 	int present_state;
 	int next_state;
 	fsm_event_t event[CONFIG_FSM_EVENTS_NUM];
+	fsm_cond_t cond;
 	fsm_action_t action;
 } fsm_row_t;
 
