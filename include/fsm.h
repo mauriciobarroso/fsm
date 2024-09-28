@@ -71,14 +71,15 @@ typedef void (*fsm_action_t)(void);
 typedef struct {
 	int present_state;
 	int next_state;
-	fsm_event_t event[CONFIG_FSM_EVENTS_NUM];
+	fsm_event_t events[2];
 	fsm_cond_t cond;
 	fsm_action_t action;
 } fsm_row_t;
 
 typedef struct {
 	int current_state;
-	fsm_row_t *row_list;
+	fsm_row_t *rows;
+  uint8_t rows_num;
 } fsm_t;
 
 /* Exported constants --------------------------------------------------------*/
@@ -90,9 +91,16 @@ typedef struct {
  * @brief Function to initialize a FSM instance.
  *
  * @param me       : Pointer to a fsm_t instance
- * @param row_list : Pointer to row list
  */
-void fsm_init(fsm_t *const me, fsm_row_t *row_list);
+void fsm_init(fsm_t *const me);
+
+/**
+ * @brief Function to add row to FSM instance.
+ *
+ * @param me  : Pointer to a fsm_t instance
+ * @param row : Pointer to row to add
+ */
+void fsm_row_add(fsm_t *const me, fsm_row_t *row);
 
 /**
  * @brief Function to run FSM instance.

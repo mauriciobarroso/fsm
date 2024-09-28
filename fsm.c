@@ -50,13 +50,37 @@
 /**
  * @brief Function to initialize a FSM instance.
  */
-void fsm_init(fsm_t *const me, fsm_row_t *row_list)
+void fsm_init(fsm_t *const me)
 {
 	/* Set current state to initial state */
 	me->current_state = 0;
 
-	/* Set row list */
-	me->row_list = row_list;
+  me->rows = NULL;
+  me->rows_num = 0;
+}
+
+/**
+ * @brief Function to add row to FSM instance.
+ */
+void fsm_row_add(fsm_t *const me, fsm_row_t *row)
+{
+  if (me == NULL) {
+    return;
+  }
+
+  if (row == NULL) {
+    return;
+  }
+
+  fsm_row_t *ptr = (fsm_row_t *)realloc(me->rows, (me->rows_num + 1) * sizeof(fsm_row_t));
+
+  if (ptr == NULL) {
+    return;
+  }
+
+  me->rows = ptr;
+  me->rows[me->rows_num] = *row;
+  me->rows_num++;
 }
 
 /**
@@ -64,25 +88,22 @@ void fsm_init(fsm_t *const me, fsm_row_t *row_list)
  */
 void fsm_run(fsm_t *const me)
 {
-	for (uint8_t i = 0; i < CONFIG_FSM_ROWS_NUM; i++) {
-		fsm_row_t row = me->row_list[i];
+	for (uint8_t i = 0; i < me->rows_num; i++) {
+		fsm_row_t row = me->rows[i];
 		if (row.present_state == me->current_state) {
 			bool condition = true;
-			for (uint8_t j = 0; j < CONFIG_FSM_EVENTS_NUM; j++) {
-				fsm_event_t event = row.event[j];
+			for (uint8_t j = 0; j < 2; j++) { /* todo: define in macros */
+				fsm_event_t event = row.events[j];
 				if (event.val != NULL) {
 					if (*event.val != FSM_EVENT_VAL_NA) {
 						bool val = event.pol ? *event.val : !(*event.val);
 
-						if (row.cond == FSM_COND_AND) {
-							condition &= val;
-						}
-						else if (row.cond == FSM_COND_OR) {
-							condition |= val;
-						}
-						else {
-
-						}
+            if (row.cond == FSM_COND_AND) {
+						  condition &= val;
+            }
+            else {
+              condition |= val;
+            }
 					}
 					else {
 						condition = false;
