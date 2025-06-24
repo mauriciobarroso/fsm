@@ -47,60 +47,111 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
+/* Exported macro ------------------------------------------------------------*/
+
 /* Exported types ------------------------------------------------------------*/
 typedef enum {
-	FSM_EVENT_VAL_NA = -1,
-	FSM_EVENT_VAL_CLEAR = 0,
-	FSM_EVENT_VAL_SET = 1,
-	FSM_EVENT_VAL_MAX,
-} fsm_event_val_t;
+	FSM_ACTION_TYPE_ENTER = 0,
+	FSM_ACTION_TYPE_UPDATE,
+	FSM_ACTION_TYPE_EXIT,
+	FSM_ACTION_TYPE_MAX,
+} fsm_action_type_t;
 
 typedef enum {
-	FSM_COND_OR = 0,
-	FSM_COND_AND,
-	FSM_COND_MAX
-} fsm_cond_t;
+	FSM_OP_OR = 0,
+	FSM_OP_AND,
+	FSM_OP_MAX
+} fsm_op_t;
 
 typedef struct {
-	fsm_event_val_t *val;
-	bool pol;
+	int *val;
+	int cmp;
 } fsm_event_t;
 
 typedef void (*fsm_action_t)(void);
 
 typedef struct {
+	fsm_action_t (*actions)[3];
+	size_t len;
+} fsm_actions_list_t;
+
+typedef struct {
 	int present_state;
 	int next_state;
-	fsm_event_t events[2];
-	fsm_cond_t cond;
-	fsm_action_t action;
-} fsm_row_t;
+	
+	struct {
+		fsm_event_t *events;
+		size_t len;
+	} events_list;
+	
+	fsm_op_t op;
+} fsm_trans_t;
+
+typedef struct {
+	fsm_trans_t *trans;
+	size_t len;
+} fsm_trans_list_t;
 
 typedef struct {
 	int current_state;
-	fsm_row_t *rows;
-  uint8_t rows_num;
+	int prev_state;
+	fsm_trans_list_t trans_list;
+	fsm_actions_list_t actions_list;
+
 } fsm_t;
 
 /* Exported constants --------------------------------------------------------*/
-
-/* Exported macro ------------------------------------------------------------*/
 
 /* Exported functions prototypes ---------------------------------------------*/
 /**
  * @brief Function to initialize a FSM instance.
  *
- * @param me       : Pointer to a fsm_t instance
+ * @param me         : Pointer to a fsm_t instance
+ * @param init_state : FSM initial state
+ *
+ * @return 0:success, -1:fail
  */
-void fsm_init(fsm_t *const me);
+int fsm_init(fsm_t *const me, int init_state);
 
 /**
- * @brief Function to add row to FSM instance.
+ * @brief Function to define and add a transition betwen 2 states for a FSM
+ *        instance.
  *
- * @param me  : Pointer to a fsm_t instance
- * @param row : Pointer to row to add
+ * @param me         : Pointer to a fsm_t instance
+ * @param trans      : Pointer to a fsm_trans_t variable that stores the
+                       transition data 
+ * @param from_state : FSM state from
+ * @param next_state : FSM state to go
+ * @param op         : Operator to evaluate the transition events
+ *
+ * @return 0:success, -1:fail
  */
-void fsm_row_add(fsm_t *const me, fsm_row_t *row);
+int fsm_add_transition(fsm_t *const me, fsm_trans_t **trans, int from_state, int next_state, fsm_op_t op);
+
+/**
+ * @brief Function to add an event for a transition for a FSM instance.
+ *
+ * @param me    : Pointer to a fsm_t instance
+ * @param trans : Pointer to a trans_t variable to add the event
+ * @param val   : Pointer to a int variable
+ * @param cmp   : Value to compare val
+ *
+ * @return 0:success, -1:fail
+ */
+int fsm_add_event(fsm_t *const me, fsm_trans_t *trans, int *val, int cmp);
+
+/**
+ * @brief Function to add callbacks for a FSM state.
+ *
+ * @param me     : Pointer to a fsm_t instance
+ * @param state  : FSM state to register the callback
+ * @param enter  : Callback to execute when state is invoked
+ * @param update : Callback to execute while state is present
+ * @param exit   : Callback to execute when state is changed
+ *
+ * @return 0:success, -1:fail
+ */
+int fsm_register_callbacks(fsm_t *const me, int state, fsm_action_t enter, fsm_action_t update, fsm_action_t exit);
 
 /**
  * @brief Function to run FSM instance.
@@ -116,3 +167,4 @@ void fsm_run(fsm_t *const me);
 #endif /* FSM_H_ */
 
 /***************************** END OF FILE ************************************/
+
