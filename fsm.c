@@ -197,15 +197,14 @@ void fsm_run(fsm_t *const me)
 	}	
 	
 	/* Execute the enter action if the current FSM state comes from a different
-	state and update the previous FSM state. In other case execute the update
-	action */
+	state and update the previous FSM state */
 	if (me->current_state != me->prev_state) {
 		execute_action(me->current_state, &me->actions_list, FSM_ACTION_TYPE_ENTER);
 		me->prev_state = me->current_state;
 	}
-	else {
-		execute_action(me->current_state, &me->actions_list, FSM_ACTION_TYPE_UPDATE);		
-	}
+
+	/* Always execute the update action for the current FSM state */
+	execute_action(me->current_state, &me->actions_list, FSM_ACTION_TYPE_UPDATE);		
 	
 	/* Evaluate the transition event and get the next FSM state. If the current FSM
 	state change then execute the exit action */	
