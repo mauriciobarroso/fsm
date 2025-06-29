@@ -62,10 +62,8 @@ int fsm_init(fsm_t *const me, int init_state) {
   /* Set default values */
   me->current_state = init_state;
   me->prev_state = me->current_state - 1;
-
   me->actions_list.actions = NULL;
   me->actions_list.len = 0;
-
   me->trans_list.trans = NULL;
   me->trans_list.len = 0;
 
@@ -266,6 +264,10 @@ static int get_next_state(fsm_trans_list_t *trans_list, int current_state) {
       }
 
       if (condition) {
+        /* Execute transition actions and return nex FSM state */
+        if (trans->action != NULL) {
+          trans->action();
+        }
         return trans->next_state;
       }
     }
@@ -277,10 +279,12 @@ static int get_next_state(fsm_trans_list_t *trans_list, int current_state) {
 
 static void execute_action(int current_state, fsm_actions_list_t *actions_list,
                            fsm_action_type_t type) {
+  /* Check if actions type is valid*/
   if (type < FSM_ACTION_TYPE_ENTER || type >= FSM_ACTION_TYPE_MAX) {
     return;
   }
 
+  /* Check if the current FSM state callback was registered */
   if (current_state < actions_list->len) {
     if (actions_list->actions[current_state][type] != NULL) {
       actions_list->actions[current_state][type]();
