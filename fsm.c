@@ -64,7 +64,7 @@ fsm_err_t fsm_init(fsm_t *const me, int init_state, fsm_time_t get_ms) {
 
   /* Set default values */
   me->current_state = init_state;
-  me->prev_state = me->current_state;
+  me->prev_state = me->current_state - 1;
   me->actions_list.actions = NULL;
   me->actions_list.len = 0;
   me->trans_list.trans = NULL;
