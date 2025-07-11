@@ -2,34 +2,38 @@ name: C/C++ CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      #1) Clone your code
+      - uses: actions/checkout@v4
 
+      #2) Clone Unity to fsm/vendor/unity
       - name: Clone Unity Test Framework
         run: |
-          git clone --depth 1 https://github.com/ThrowTheSwitch/Unity.git vendor/unity
+          git clone --depth 1 \
+            https://github.com/ThrowTheSwitch/Unity.git \
+            fsm/vendor/unity
 
-      - name: Configure
-        run: ./configure
+      #3) Compile the library with CMake
+      - name: Configure & build library
+        run: |
+          mkdir -p fsm/build
+          cmake -S fsm -B fsm/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build fsm/build -- -j
 
-      - name: Build
-        run: make
-
+      #4) Run Unity tests (Makefile)
       - name: Run unit tests
-        run: make check
+        working-directory: fsm
+        run: make -f test/makefile
 
-      - name: Run distcheck
-        run: make distcheck
-
+      # (Optional) 5) Clean Unity to avoid leaving garbage in the workspace 
       - name: Clean up Unity
         if: always()
-        run: rm -rf vendor/unity
+        run: rm -rf fsm/vendor/unity
