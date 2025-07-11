@@ -21,7 +21,7 @@ jobs:
             fsm/vendor/unity
 
       - name: Run unit tests
-        run: make -f fsm/test/makefile
+        run: make -f test/makefile
 
       - name: Clean up Unity
         if: always()
