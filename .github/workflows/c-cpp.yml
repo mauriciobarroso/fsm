@@ -18,7 +18,7 @@ jobs:
         run: |
           git clone --depth 1 \
             https://github.com/ThrowTheSwitch/Unity.git \
-            fsm/vendor/unity
+            vendor/unity
 
       - name: Run unit tests
         run: make -f test/makefile
