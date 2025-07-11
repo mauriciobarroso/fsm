@@ -8,5 +8,5 @@ TEST_OBJS = $(patsubst %.c,%.o,$(TEST_SRCS))
 TEST_BIN = fsm_test
 
 test: $(TEST_OBJS) $(UNITY_SRC) $(FSM_SRC)
-	$(CC) $^ -o $(TEST_BIN) 
+	$(CC) $(CFLAGS) $^ -o $(TEST_BIN) 
 	./$(TEST_BIN)
