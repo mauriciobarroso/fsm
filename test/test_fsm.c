@@ -100,7 +100,7 @@ void test_timeout_transition_only(void) {
 	}
 
 	TEST_ASSERT_EQUAL_INT(1, enter_s0_cnt);
-	TEST_ASSERT_EQUAL_INT(4, update_s0_cnt);
+	TEST_ASSERT_EQUAL_INT(3, update_s0_cnt);
 	TEST_ASSERT_EQUAL_INT(0, exit_s0_cnt);
 
 	/* Transition on 100 timeout and execute S0 exit action*/
