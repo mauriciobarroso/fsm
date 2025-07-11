@@ -1,0 +1,35 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Clone Unity Test Framework
+        run: |
+          git clone --depth 1 https://github.com/ThrowTheSwitch/Unity.git vendor/unity
+
+      - name: Configure
+        run: ./configure
+
+      - name: Build
+        run: make
+
+      - name: Run unit tests
+        run: make check
+
+      - name: Run distcheck
+        run: make distcheck
+
+      - name: Clean up Unity
+        if: always()
+        run: rm -rf vendor/unity
