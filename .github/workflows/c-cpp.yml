@@ -21,14 +21,7 @@ jobs:
             https://github.com/ThrowTheSwitch/Unity.git \
             fsm/vendor/unity
 
-      #3) Compile the library with CMake
-      - name: Configure & build library
-        run: |
-          mkdir -p fsm/build
-          cmake -S fsm -B fsm/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build fsm/build -- -j
-
-      #4) Run Unity tests (Makefile)
+      #3) Run Unity tests (Makefile)
       - name: Run unit tests
         working-directory: fsm
         run: make -f test/makefile
