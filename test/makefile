@@ -1,4 +1,6 @@
 UNITY_DIR = vendor/unity/src
+UNITY_SRC = $(UNITY_DIR)/unity.c
+FSM_SRC = fsm.c
 CFLAGS += -I$(UNITY_DIR)
 CFLAGS += -Iinclude
 TEST_SRCS = test/test_fsm.c
