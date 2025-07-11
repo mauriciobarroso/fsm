@@ -11,22 +11,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      #1) Clone your code
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      #2) Clone Unity to fsm/vendor/unity
       - name: Clone Unity Test Framework
         run: |
           git clone --depth 1 \
             https://github.com/ThrowTheSwitch/Unity.git \
             fsm/vendor/unity
 
-      #3) Run Unity tests (Makefile)
       - name: Run unit tests
-        working-directory: fsm
-        run: make -f test/makefile
+        run: make -f fsm/test/makefile
 
-      # (Optional) 5) Clean Unity to avoid leaving garbage in the workspace 
       - name: Clean up Unity
         if: always()
         run: rm -rf fsm/vendor/unity
