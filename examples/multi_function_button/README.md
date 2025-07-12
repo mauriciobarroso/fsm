@@ -53,7 +53,7 @@ stateDiagram-v2
 ## License
 MIT License
 
-Copyright (c) 2024 Mauricio Barroso Benavides
+Copyright (c) 2025 Mauricio Barroso Benavides
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
