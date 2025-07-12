@@ -13,9 +13,7 @@ A lightweight C library for building and executing finite state machines with mi
 
 ## Examples
 
-* Multi‑function button handler (single, double, long press)
-* Debounce filter with timeout confirmation
-* Generic GPIO‑driven state transitions
+* [Multi‑function button](examples/multi_function_button)
 
 ## How to use
 
