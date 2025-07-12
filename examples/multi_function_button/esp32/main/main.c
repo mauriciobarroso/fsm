@@ -33,17 +33,17 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
+/* Standard includes */
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/_intsup.h>
 
-#include "driver/gpio.h"
-
-#include "esp_timer.h"
-#include "freertos/idf_additions.h"
-#include "freertos/projdefs.h"
+/* Component includes */
 #include "fsm.h"
-#include "hal/gpio_types.h"
+
+/* Device specific includes */
+#include "freertos/FreeRTOS.h"
+#include "driver/gpio.h"
+#include "esp_timer.h"
 
 /* Macros --------------------------------------------------------------------*/
 #define TICK_MS 10
@@ -72,9 +72,10 @@ static int gpio_level;
 
 /* Private function prototypes -----------------------------------------------*/
 /* Device specific funtions */
-static bool get_gpio_level(int gpio);
-static void delay_ms(uint32_t ms);
-static uint32_t get_ms(void);
+static bool dev_gpio_init(int gpio);
+static bool dev_get_gpio_level(int gpio);
+static void dev_delay_ms(uint32_t ms);
+static uint32_t dev_get_ms(void);
 
 /* Event evaluation functions */
 static bool eval_eq(int a, int b);
@@ -89,17 +90,10 @@ static void on_check_gpio(void);
 
 /* Main ----------------------------------------------------------------------*/
 void app_main(void) {
-	gpio_config_t gpio_cfg;
-	gpio_cfg.pin_bit_mask = 1ULL << BUTTON_GPIO_NUM;
-	gpio_cfg.mode = GPIO_MODE_INPUT;
-	gpio_cfg.pull_up_en = GPIO_PULLUP_ENABLE;
-	gpio_cfg.pull_down_en = GPIO_PULLUP_DISABLE;
-	gpio_cfg.intr_type = GPIO_INTR_DISABLE;
-
-	gpio_config(&gpio_cfg);
+	dev_gpio_init(BUTTON_GPIO_NUM);
 
 	/* Initialize button FSM instance */
-	fsm_init(&button_fsm, BUTTON_STATE_IDLE, get_ms);
+	fsm_init(&button_fsm, BUTTON_STATE_IDLE, dev_get_ms);
 
 	/* Add all the transitions and events for the button FSM instance */
 	fsm_trans_t *trans = NULL;
@@ -164,17 +158,27 @@ void app_main(void) {
 	for (;;) {
 		/* Execute the button FSM every TICK_MS ms */
 		fsm_run(&button_fsm);
-		delay_ms(TICK_MS);
+		dev_delay_ms(TICK_MS);
 	}
 }
 
 /* Private function definition -----------------------------------------------*/
 /* Device specific funtions */
-static bool get_gpio_level(int gpio) { return gpio_get_level(gpio); }
+static bool dev_gpio_init(int gpio) {
+	gpio_config_t gpio_cfg;
+	gpio_cfg.pin_bit_mask = 1ULL << BUTTON_GPIO_NUM;
+	gpio_cfg.mode = GPIO_MODE_INPUT;
+	gpio_cfg.pull_up_en = GPIO_PULLUP_ENABLE;
+	gpio_cfg.pull_down_en = GPIO_PULLUP_DISABLE;
+	gpio_cfg.intr_type = GPIO_INTR_DISABLE;
+	return gpio_config(&gpio_cfg);
+}
 
-static void delay_ms(uint32_t ms) { vTaskDelay(pdMS_TO_TICKS(TICK_MS)); }
+static bool dev_get_gpio_level(int gpio) { return gpio_get_level(gpio); }
 
-static uint32_t get_ms(void) { return esp_timer_get_time() / 1000; }
+static void dev_delay_ms(uint32_t ms) { vTaskDelay(pdMS_TO_TICKS(TICK_MS)); }
+
+static uint32_t dev_get_ms(void) { return esp_timer_get_time() / 1000; }
 
 /* Event evaluation functions */
 static bool eval_eq(int a, int b) { return (a == b); }
@@ -188,7 +192,7 @@ static void on_press_long(void) { printf("Long click!\r\n"); }
 
 /* FSM callbacks functions */
 static void on_check_gpio(void) {
-	gpio_level = get_gpio_level(BUTTON_GPIO_NUM);
+	gpio_level = dev_get_gpio_level(BUTTON_GPIO_NUM);
 }
 
 /***************************** END OF FILE ************************************/
