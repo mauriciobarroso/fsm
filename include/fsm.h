@@ -57,7 +57,7 @@ typedef enum {
 } fsm_err_t;
 
 typedef enum {
-  FSM_ACTION_TYPE_ENTER = 0,
+  FSM_ACTION_TYPE_ENTRY = 0,
   FSM_ACTION_TYPE_UPDATE,
   FSM_ACTION_TYPE_EXIT,
   FSM_ACTION_TYPE_TRANS,

@@ -268,7 +268,7 @@ fsm_err_t fsm_register_state_actions(fsm_t *const me, int state,
     me->actions_list.len = state + 1;
   }
 
-  me->actions_list.actions[state][FSM_ACTION_TYPE_ENTER] = enter;
+  me->actions_list.actions[state][FSM_ACTION_TYPE_ENTRY] = enter;
   me->actions_list.actions[state][FSM_ACTION_TYPE_UPDATE] = update;
   me->actions_list.actions[state][FSM_ACTION_TYPE_EXIT] = exit;
 
@@ -293,7 +293,7 @@ fsm_err_t fsm_run(fsm_t *const me) {
   action */
   if (me->current_state != me->prev_state) {
     me->entry_ms = now_ms;
-    execute_action(me->current_state, &me->actions_list, FSM_ACTION_TYPE_ENTER);
+    execute_action(me->current_state, &me->actions_list, FSM_ACTION_TYPE_ENTRY);
     me->prev_state = me->current_state;
   } else {
     execute_action(me->current_state, &me->actions_list,
@@ -363,7 +363,7 @@ static int get_next_state(fsm_trans_list_t *trans_list, int current_state,
 static void execute_action(int current_state, fsm_actions_list_t *actions_list,
                            fsm_action_type_t type) {
   /* Check if actions type is valid*/
-  if (type < FSM_ACTION_TYPE_ENTER || type >= FSM_ACTION_TYPE_MAX) {
+  if (type < FSM_ACTION_TYPE_ENTRY || type >= FSM_ACTION_TYPE_MAX) {
     return;
   }
 
