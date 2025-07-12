@@ -9,6 +9,7 @@ A lightweight C library for building and executing finite state machines with mi
 * Supports Mealy, Moore, and mixed state outputs
 * Small memory footprint (minimal dynamic allocations)
 * Built‑in internal timeout events for delay‑driven transitions
+* Can be used as ESP-IDF component
 
 ## Examples
 
