@@ -1,4 +1,4 @@
-# FSM
+# FSM Library for Embedded C Projects
 
 A lightweight C library for building and executing finite state machines with minimal overhead. Easily define states, transitions, composite events, and associate entry, update, and exit actions for each state.
 
