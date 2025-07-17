@@ -82,8 +82,8 @@ typedef struct {
 } fsm_actions_list_t;
 
 typedef struct {
-  int present_state;
-  int next_state;
+  uint8_t present_state;
+  uint8_t next_state;
 
   struct {
     fsm_event_t *events;
@@ -103,8 +103,8 @@ typedef struct {
 typedef uint32_t (*fsm_time_t)(void);
 
 typedef struct {
-  int current_state;
-  int prev_state;
+  uint8_t current_state;
+  uint8_t prev_state;
   fsm_trans_list_t trans_list;
   fsm_actions_list_t actions_list;
   fsm_time_t get_ms;
@@ -125,7 +125,7 @@ typedef struct {
  *   - FSM_ERR_OK: succeed
  *   - FSM_ERR_INVALID_PARAM: invalid parameter
  */
-fsm_err_t fsm_init(fsm_t *const me, int init_state, fsm_time_t get_ms);
+fsm_err_t fsm_init(fsm_t *const me, uint8_t init_state, fsm_time_t get_ms);
 
 /**
  * @brief Function to define and add a transition betwen 2 states for a FSM
@@ -144,7 +144,7 @@ fsm_err_t fsm_init(fsm_t *const me, int init_state, fsm_time_t get_ms);
  *   - FSM_ERR_NO_MEM: out of memory
  */
 fsm_err_t fsm_add_transition(fsm_t *const me, fsm_trans_t **trans,
-                             int from_state, int next_state);
+                             uint8_t from_state, uint8_t next_state);
 
 /**
  * @brief Function to set the operator to evaluate the transition events.
@@ -221,7 +221,7 @@ fsm_err_t fsm_register_trans_action(fsm_t *const me, fsm_trans_t *trans,
  *   - FSM_ERR_INVALID_PARAM: invalid parameter
  *   - FSM_ERR_NO_MEM: out of memory
  */
-fsm_err_t fsm_register_state_actions(fsm_t *const me, int state,
+fsm_err_t fsm_register_state_actions(fsm_t *const me, uint8_t state,
                                      fsm_action_t enter, fsm_action_t update,
                                      fsm_action_t exit);
 

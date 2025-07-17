@@ -43,9 +43,10 @@
 /* Private macro -------------------------------------------------------------*/
 
 /* Private function prototypes -----------------------------------------------*/
-static int get_next_state(fsm_trans_list_t *trans_list, int current_state,
-                          uint32_t elapsed_ms);
-static void execute_action(int current_state, fsm_actions_list_t *actions_list,
+static uint8_t get_next_state(fsm_trans_list_t *trans_list,
+                              uint8_t current_state, uint32_t elapsed_ms);
+static void execute_action(uint8_t current_state,
+                           fsm_actions_list_t *actions_list,
                            fsm_action_type_t type);
 static bool eval_events(fsm_trans_t *trans);
 static bool eval_timeout(fsm_trans_t *trans, uint32_t elapsed_time);
@@ -56,7 +57,7 @@ static bool eval_timeout(fsm_trans_t *trans, uint32_t elapsed_time);
 /**
  * @brief Function to initialize a FSM instance.
  */
-fsm_err_t fsm_init(fsm_t *const me, int init_state, fsm_time_t get_ms) {
+fsm_err_t fsm_init(fsm_t *const me, uint8_t init_state, fsm_time_t get_ms) {
   /* Check if the FSM instance is valid */
   if (me == NULL) {
     return FSM_ERR_INVALID_PARAM;
@@ -80,7 +81,7 @@ fsm_err_t fsm_init(fsm_t *const me, int init_state, fsm_time_t get_ms) {
  * @brief Function to add a transition betwen state to FSM instance.
  */
 fsm_err_t fsm_add_transition(fsm_t *const me, fsm_trans_t **trans,
-                             int from_state, int next_state) {
+                             uint8_t from_state, uint8_t next_state) {
   /* Check if the FSM instance is valid */
   if (me == NULL) {
     return FSM_ERR_INVALID_PARAM;
@@ -139,8 +140,8 @@ fsm_err_t fsm_set_event_op(fsm_t *const me, fsm_trans_t *trans, fsm_op_t op) {
 /**
  * @brief Function to add an event for a transition for a FSM instance.
  */
-fsm_err_t fsm_add_event_cmp(fsm_t *const me, fsm_trans_t *trans, int *val, int cmp,
-                        fsm_eval_t eval) {
+fsm_err_t fsm_add_event_cmp(fsm_t *const me, fsm_trans_t *trans, int *val,
+                            int cmp, fsm_eval_t eval) {
   /* Check if the FSM instance is valid */
   if (me == NULL) {
     return FSM_ERR_INVALID_PARAM;
@@ -242,16 +243,11 @@ fsm_err_t fsm_register_trans_action(fsm_t *const me, fsm_trans_t *trans,
 /**
  * @brief Function to register callbacks for a FSM state.
  */
-fsm_err_t fsm_register_state_actions(fsm_t *const me, int state,
+fsm_err_t fsm_register_state_actions(fsm_t *const me, uint8_t state,
                                      fsm_action_t enter, fsm_action_t update,
                                      fsm_action_t exit) {
   /* Check if the FSM instance is valid */
   if (me == NULL) {
-    return FSM_ERR_INVALID_PARAM;
-  }
-
-  /* Check if the FSM state is valid */
-  if (state < 0) {
     return FSM_ERR_INVALID_PARAM;
   }
 
@@ -302,7 +298,7 @@ fsm_err_t fsm_run(fsm_t *const me) {
 
   /* Evaluate the transition event and get the next FSM state. If the current
   FSM state change then execute the exit action */
-  int next_state =
+  uint8_t next_state =
       get_next_state(&me->trans_list, me->current_state, now_ms - me->entry_ms);
 
   if (next_state != me->current_state) {
@@ -316,8 +312,8 @@ fsm_err_t fsm_run(fsm_t *const me) {
 }
 
 /* Private functions ---------------------------------------------------------*/
-static int get_next_state(fsm_trans_list_t *trans_list, int current_state,
-                          uint32_t elapsed_ms) {
+static uint8_t get_next_state(fsm_trans_list_t *trans_list,
+                              uint8_t current_state, uint32_t elapsed_ms) {
   for (size_t i = 0; i < trans_list->len; i++) {
     /* Find coincidences for current state */
     fsm_trans_t *trans = &trans_list->trans[i];
@@ -360,7 +356,8 @@ static int get_next_state(fsm_trans_list_t *trans_list, int current_state,
   return current_state;
 }
 
-static void execute_action(int current_state, fsm_actions_list_t *actions_list,
+static void execute_action(uint8_t current_state,
+                           fsm_actions_list_t *actions_list,
                            fsm_action_type_t type) {
   /* Check if actions type is valid*/
   if (type < FSM_ACTION_TYPE_ENTRY || type >= FSM_ACTION_TYPE_MAX) {
