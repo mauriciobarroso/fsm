@@ -111,7 +111,8 @@ fsm_err_t fsm_add_transition(fsm_t *const me, fsm_trans_t **trans,
   me->trans_list.trans[index].present_state = from_state;
   me->trans_list.trans[index].next_state = next_state;
   me->trans_list.trans[index].op = FSM_OP_AND; /* default operator */
-  me->trans_list.trans[index].action = NULL;
+  me->trans_list.trans[index].action.fn = NULL;
+  me->trans_list.trans[index].action.arg = NULL;
   me->trans_list.trans[index].timeout = 0;
 
   /* Assign the last transition added to transition out parameter */
@@ -222,7 +223,7 @@ fsm_err_t fsm_add_event_timeout(fsm_t *const me, fsm_trans_t *trans,
  * @brief Function to register an action for a FSM state transition.
  */
 fsm_err_t fsm_register_trans_action(fsm_t *const me, fsm_trans_t *trans,
-                                    fsm_action_t action) {
+                                    fsm_fn_t fn, void *arg) {
   /* Check if the FSM instance is valid */
   if (me == NULL) {
     return FSM_ERR_INVALID_PARAM;
@@ -234,7 +235,8 @@ fsm_err_t fsm_register_trans_action(fsm_t *const me, fsm_trans_t *trans,
   }
 
   /* Assign the action function pointer */
-  trans->action = action;
+  trans->action.fn = fn;
+  trans->action.arg = arg;
 
   /* Return success */
   return FSM_ERR_OK;
@@ -244,8 +246,9 @@ fsm_err_t fsm_register_trans_action(fsm_t *const me, fsm_trans_t *trans,
  * @brief Function to register callbacks for a FSM state.
  */
 fsm_err_t fsm_register_state_actions(fsm_t *const me, uint8_t state,
-                                     fsm_action_t enter, fsm_action_t update,
-                                     fsm_action_t exit) {
+                                     fsm_fn_t entry_fn, void *entry_arg,
+                                     fsm_fn_t update_fn, void *update_arg,
+                                     fsm_fn_t exit_fn, void *exit_arg) {
   /* Check if the FSM instance is valid */
   if (me == NULL) {
     return FSM_ERR_INVALID_PARAM;
@@ -264,9 +267,12 @@ fsm_err_t fsm_register_state_actions(fsm_t *const me, uint8_t state,
     me->actions_list.len = state + 1;
   }
 
-  me->actions_list.actions[state][FSM_ACTION_TYPE_ENTRY] = enter;
-  me->actions_list.actions[state][FSM_ACTION_TYPE_UPDATE] = update;
-  me->actions_list.actions[state][FSM_ACTION_TYPE_EXIT] = exit;
+  me->actions_list.actions[state][FSM_ACTION_TYPE_ENTRY].fn = entry_fn;
+  me->actions_list.actions[state][FSM_ACTION_TYPE_ENTRY].arg = entry_arg;
+  me->actions_list.actions[state][FSM_ACTION_TYPE_UPDATE].fn = update_fn;
+  me->actions_list.actions[state][FSM_ACTION_TYPE_UPDATE].arg = update_arg;
+  me->actions_list.actions[state][FSM_ACTION_TYPE_EXIT].fn = exit_fn;
+  me->actions_list.actions[state][FSM_ACTION_TYPE_EXIT].arg = exit_arg;
 
   /* Return success */
   return FSM_ERR_OK;
@@ -342,8 +348,8 @@ static uint8_t get_next_state(fsm_trans_list_t *trans_list,
       if (res) {
       TRANSITION:
         /* Execute the transition action */
-        if (trans->action != NULL) {
-          trans->action();
+        if (trans->action.fn != NULL) {
+          trans->action.fn(trans->action.arg);
         }
 
         /* Return the next state */
@@ -366,8 +372,9 @@ static void execute_action(uint8_t current_state,
 
   /* Check if the current FSM state callback was registered */
   if (current_state < actions_list->len) {
-    if (actions_list->actions[current_state][type] != NULL) {
-      actions_list->actions[current_state][type]();
+    if (actions_list->actions[current_state][type].fn != NULL) {
+      actions_list->actions[current_state][type].fn(
+          actions_list->actions[current_state][type].arg);
     }
   }
 }

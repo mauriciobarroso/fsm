@@ -43,8 +43,8 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 /* Exported macro ------------------------------------------------------------*/
 
@@ -74,7 +74,12 @@ typedef struct {
   fsm_eval_t eval;
 } fsm_event_t;
 
-typedef void (*fsm_action_t)(void);
+typedef void (*fsm_fn_t)(void *arg);
+
+typedef struct {
+  fsm_fn_t fn;
+  void *arg;
+} fsm_action_t;
 
 typedef struct {
   fsm_action_t (*actions)[3];
@@ -89,7 +94,7 @@ typedef struct {
     fsm_event_t *events;
     size_t len;
   } events_list;
-  
+
   uint32_t timeout;
   fsm_op_t op;
   fsm_action_t action;
@@ -174,15 +179,15 @@ fsm_err_t fsm_set_event_op(fsm_t *const me, fsm_trans_t *trans, fsm_op_t op);
  *   - FSM_ERR_NO_MEM: out of memory
  *   - FSM_ERR_FAIL: other error
  */
-fsm_err_t fsm_add_event_cmp(fsm_t *const me, fsm_trans_t *trans, int *val, int cmp,
-                        fsm_eval_t eval);
+fsm_err_t fsm_add_event_cmp(fsm_t *const me, fsm_trans_t *trans, int *val,
+                            int cmp, fsm_eval_t eval);
 
 /**
  * @brief Function to add a timeout event for a transition for a FSM instance.
  *
  * @param me      : Pointer to a fsm_t instance
  * @param trans   : Pointer to a trans_t variable to add the event
- * @param timeout : Timeout in ms 
+ * @param timeout : Timeout in ms
  *
  * @return
  *   - FSM_ERR_OK: succeed
@@ -196,25 +201,29 @@ fsm_err_t fsm_add_event_timeout(fsm_t *const me, fsm_trans_t *trans,
 /**
  * @brief Function to register an action for a FSM state transition.
  *
- * @param me     : Pointer to a fsm_t instance
- * @param trans  : Pointer to a trans_t variable to check its transition
- * @param action : Action to execute when the trans events are met
+ * @param me    : Pointer to a fsm_t instance
+ * @param trans : Pointer to a trans_t variable to check its transition
+ * @param fn    : Action function to execute when the trans events are met
+ * @param arg   : Action function argument
  *
  * @return
  *   - FSM_ERR_OK: succeed
  *   - FSM_ERR_INVALID_PARAM: invalid parameter
  */
 fsm_err_t fsm_register_trans_action(fsm_t *const me, fsm_trans_t *trans,
-                                    fsm_action_t action);
+                                    fsm_fn_t fn, void *arg);
 
 /**
  * @brief Function to register callbacks for a FSM state.
  *
- * @param me     : Pointer to a fsm_t instance
- * @param state  : FSM state to register the callback
- * @param enter  : Callback to execute when state is invoked
- * @param update : Callback to execute while state is present
- * @param exit   : Callback to execute when state is changed
+ * @param me         : Pointer to a fsm_t instance
+ * @param state      : FSM state to register the callback
+ * @param entry_fn   : Callback function to execute when state is invoked
+ * @param entry_arg  : Callback function argument
+ * @param update_fn  : Callback function to execute while state is present
+ * @param update_arg : Callback function argument
+ * @param exit_fn    : Callback function to execute when state is changed
+ * @param exit_arg   : Callback function argument
  *
  * @return
  *   - FSM_ERR_OK: succeed
@@ -222,8 +231,9 @@ fsm_err_t fsm_register_trans_action(fsm_t *const me, fsm_trans_t *trans,
  *   - FSM_ERR_NO_MEM: out of memory
  */
 fsm_err_t fsm_register_state_actions(fsm_t *const me, uint8_t state,
-                                     fsm_action_t enter, fsm_action_t update,
-                                     fsm_action_t exit);
+                                     fsm_fn_t entry_fn, void *entry_arg,
+                                     fsm_fn_t update_fn, void *update_arg,
+                                     fsm_fn_t exit_fn, void *exit_arg);
 
 /**
  * @brief Function to run FSM instance.
