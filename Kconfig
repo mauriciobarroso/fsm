@@ -1,15 +1,15 @@
 menu "FSM Configuration"
 
-    config FSM_EVENTS_NUM
-        int "FSM events number"
-        default 2
+    config FSM_TRANS_NUM_MAX
+        int "Maximum number of FSM transitions"
+        default 20
         help
-        	Set the number of FSM events to check per row.
+        	Set the maximum number of FSM states transitions.
         	
-    config FSM_ROWS_NUM
-        int "FSM rows number"
+    config FSM_STATES_NUM_MAX
+        int "Maximum number o FSM states"
         default 10
         help
-        	Set the number of rows to check.
+        	Set the maximum number of FSM states.
 
 endmenu
