@@ -47,8 +47,24 @@ extern "C" {
 #include <stdlib.h>
 
 /* Exported macro ------------------------------------------------------------*/
-#define FSM_TRANS_NUM_MAX 10
-#define FSM_STATES_NUM_MAX 10
+#define FSM_TRANS_NUM_MAX_DEFAULT 20
+#define FSM_STATES_NUM_MAX_DEFAULT 10
+
+#ifndef FSM_TRANS_NUM_MAX
+  #ifdef CONFIG_FSM_TRANS_NUM_MAX
+    #define FSM_TRANS_NUM_MAX   CONFIG_FSM_TRANS_NUM_MAX
+  #else
+    #define FSM_TRANS_NUM_MAX   FSM_TRANS_NUM_MAX_DEFAULT
+  #endif /* CONFIG_FSM_TRANS_NUM_MAX */
+#endif /* FSM_TRANS_NUM_MAX */
+
+#ifndef FSM_STATES_NUM_MAX
+  #ifdef CONFIG_FSM_STATES_NUM_MAX
+    #define FSM_STATES_NUM_MAX  CONFIG_FSM_STATES_NUM_MAX
+  #else
+    #define FSM_STATES_NUM_MAX  FSM_STATES_NUM_MAX_DEFAULT
+  #endif /* CONFIG_FSM_STATES_NUM_MAX */
+#endif /* FSM_STATES_NUM_MAX */
 
 /* Exported types ------------------------------------------------------------*/
 typedef enum {
