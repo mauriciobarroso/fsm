@@ -47,11 +47,13 @@ extern "C" {
 #include <stdlib.h>
 
 /* Exported macro ------------------------------------------------------------*/
+#define FSM_TRANS_NUM_MAX 10
+#define FSM_STATES_NUM_MAX 10
 
 /* Exported types ------------------------------------------------------------*/
 typedef enum {
   FSM_ERR_INVALID_PARAM = -3,
-  FSM_ERR_NO_MEM = -2,
+  FSM_ERR_TRANS_LIST_FULL = -2,
   FSM_ERR_FAIL = -1,
   FSM_ERR_OK = 0,
 } fsm_err_t;
@@ -60,7 +62,6 @@ typedef enum {
   FSM_ACTION_TYPE_ENTRY = 0,
   FSM_ACTION_TYPE_UPDATE,
   FSM_ACTION_TYPE_EXIT,
-  FSM_ACTION_TYPE_TRANS,
   FSM_ACTION_TYPE_MAX,
 } fsm_action_type_t;
 
@@ -72,7 +73,9 @@ typedef struct {
   int *val;
   int cmp;
   fsm_eval_t eval;
-} fsm_event_t;
+  fsm_op_t op;
+  uint32_t timeout;
+} fsm_events_t;
 
 typedef void (*fsm_fn_t)(void *arg);
 
@@ -82,27 +85,15 @@ typedef struct {
 } fsm_action_t;
 
 typedef struct {
-  fsm_action_t (*actions)[3];
-  size_t len;
-} fsm_actions_list_t;
-
-typedef struct {
   uint8_t present_state;
   uint8_t next_state;
-
-  struct {
-    fsm_event_t *events;
-    size_t len;
-  } events_list;
-
-  uint32_t timeout;
-  fsm_op_t op;
+  fsm_events_t events;
   fsm_action_t action;
 } fsm_trans_t;
 
 typedef struct {
-  fsm_trans_t *trans;
-  size_t len;
+  fsm_trans_t trans[FSM_TRANS_NUM_MAX];
+  uint8_t len;
 } fsm_trans_list_t;
 
 typedef uint32_t (*fsm_time_t)(void);
@@ -111,7 +102,7 @@ typedef struct {
   uint8_t current_state;
   uint8_t prev_state;
   fsm_trans_list_t trans_list;
-  fsm_actions_list_t actions_list;
+  fsm_action_t state_actions[FSM_STATES_NUM_MAX][FSM_ACTION_TYPE_MAX];
   fsm_time_t get_ms;
   uint32_t entry_ms;
 } fsm_t;
@@ -136,67 +127,37 @@ fsm_err_t fsm_init(fsm_t *const me, uint8_t init_state, fsm_time_t get_ms);
  * @brief Function to define and add a transition betwen 2 states for a FSM
  *        instance.
  *
- * @param me         : Pointer to a fsm_t instance
- * @param trans      : Pointer to a fsm_trans_t variable that stores the
-                       transition data
- * @param from_state : FSM state from
- * @param next_state : FSM state to go
- * @param op         : Operator to evaluate the transition events
+ * @param me            : Pointer to a fsm_t instance
+ * @param trans         : Pointer to a porinter fsm_trans_t variable that stores the
+                          transition data
+ * @param present_state : FSM state from
+ * @param next_state    : FSM state to go
  *
  * @return
  *   - FSM_ERR_OK: succeed
  *   - FSM_ERR_INVALID_PARAM: invalid parameter
- *   - FSM_ERR_NO_MEM: out of memory
+ *   - FSM_ERR_TRANS_LIST_FULL: Transitions list full
  */
 fsm_err_t fsm_add_transition(fsm_t *const me, fsm_trans_t **trans,
-                             uint8_t from_state, uint8_t next_state);
+                             uint8_t present_state, uint8_t next_state);
 
-/**
- * @brief Function to set the operator to evaluate the transition events.
- *
- * @param me    : Pointer to a fsm_t instance
- * @param trans : Pointer to a trans_t variable to add the event
- * @param op    : Operator to evaluate the transition events
- *
- * @return
- *   - FSM_ERR_OK: succeed
- *   - FSM_ERR_INVALID_PARAM: invalid parameter
- */
-fsm_err_t fsm_set_event_op(fsm_t *const me, fsm_trans_t *trans, fsm_op_t op);
-
-/**
- * @brief Function to add an event for a transition for a FSM instance.
- *
- * @param me    : Pointer to a fsm_t instance
- * @param trans : Pointer to a trans_t variable to add the event
- * @param val   : Pointer to a int variable
- * @param cmp   : Value to compare val
- * @param eval  : Function to evaluate val and cmp
- *
- * @return
- *   - FSM_ERR_OK: succeed
- *   - FSM_ERR_INVALID_PARAM: invalid parameter
- *   - FSM_ERR_NO_MEM: out of memory
- *   - FSM_ERR_FAIL: other error
- */
-fsm_err_t fsm_add_event_cmp(fsm_t *const me, fsm_trans_t *trans, int *val,
-                            int cmp, fsm_eval_t eval);
-
-/**
- * @brief Function to add a timeout event for a transition for a FSM instance.
+ /**
+ * @brief Function to add the events and condition to perform a transition for a FSM instance.
  *
  * @param me      : Pointer to a fsm_t instance
  * @param trans   : Pointer to a trans_t variable to add the event
- * @param timeout : Timeout in ms
+ * @param val     : Pointer to a int variable
+ * @param cmp     : Value to compare against val
+ * @param eval    : Function to evaluate val and cmp
+ * @param timeout : Timeout in ms to compare againt the elapsed time in the current state
+ * @param op      : Operator to evaluate the transition events
  *
  * @return
  *   - FSM_ERR_OK: succeed
  *   - FSM_ERR_INVALID_PARAM: invalid parameter
- *   - FSM_ERR_NO_MEM: out of memory
- *   - FSM_ERR_FAIL: other error
  */
-fsm_err_t fsm_add_event_timeout(fsm_t *const me, fsm_trans_t *trans,
-                                uint32_t timeout);
+fsm_err_t fsm_set_events(fsm_t *const me, fsm_trans_t *trans, int *val,
+                            int cmp, fsm_eval_t eval, uint32_t timeout, fsm_op_t op);
 
 /**
  * @brief Function to register an action for a FSM state transition.
@@ -228,7 +189,6 @@ fsm_err_t fsm_register_trans_action(fsm_t *const me, fsm_trans_t *trans,
  * @return
  *   - FSM_ERR_OK: succeed
  *   - FSM_ERR_INVALID_PARAM: invalid parameter
- *   - FSM_ERR_NO_MEM: out of memory
  */
 fsm_err_t fsm_register_state_actions(fsm_t *const me, uint8_t state,
                                      fsm_fn_t entry_fn, void *entry_arg,

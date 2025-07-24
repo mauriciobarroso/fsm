@@ -41,15 +41,16 @@
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private macro -------------------------------------------------------------*/
+#define FSM_STATE_NONE  UINT8_MAX
+#define FSM_TIMEOUT_MAX UINT32_MAX - 1
 
 /* Private function prototypes -----------------------------------------------*/
 static uint8_t get_next_state(fsm_trans_list_t *trans_list,
                               uint8_t current_state, uint32_t elapsed_ms);
 static void execute_action(uint8_t current_state,
-                           fsm_actions_list_t *actions_list,
+                           fsm_action_t actions[][FSM_ACTION_TYPE_MAX],
                            fsm_action_type_t type);
-static bool eval_events(fsm_trans_t *trans);
-static bool eval_timeout(fsm_trans_t *trans, uint32_t elapsed_time);
+static bool eval_events(const fsm_events_t *events, uint32_t elapsed_ms);
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -63,15 +64,24 @@ fsm_err_t fsm_init(fsm_t *const me, uint8_t init_state, fsm_time_t get_ms) {
     return FSM_ERR_INVALID_PARAM;
   }
 
+  /* Check if the FSM init state is valid */
+  if (init_state >= FSM_STATES_NUM_MAX) {
+    return FSM_ERR_INVALID_PARAM;
+  }
+
   /* Set default values */
   me->current_state = init_state;
-  me->prev_state = me->current_state - 1;
-  me->actions_list.actions = NULL;
-  me->actions_list.len = 0;
-  me->trans_list.trans = NULL;
+  me->prev_state = FSM_STATE_NONE;
   me->trans_list.len = 0;
   me->get_ms = get_ms;
   me->entry_ms = 0;
+
+  for (uint8_t i = 0; i < FSM_STATES_NUM_MAX; i++) {
+    for (uint8_t j = 0; j < FSM_ACTION_TYPE_MAX; j++) {
+      me->state_actions[i][j].fn = NULL;
+      me->state_actions[i][j].arg = NULL;
+    }
+  }
 
   /* Return success */
   return FSM_ERR_OK;
@@ -81,68 +91,58 @@ fsm_err_t fsm_init(fsm_t *const me, uint8_t init_state, fsm_time_t get_ms) {
  * @brief Function to add a transition betwen state to FSM instance.
  */
 fsm_err_t fsm_add_transition(fsm_t *const me, fsm_trans_t **trans,
-                             uint8_t from_state, uint8_t next_state) {
+                             uint8_t present_state, uint8_t next_state) {
   /* Check if the FSM instance is valid */
   if (me == NULL) {
     return FSM_ERR_INVALID_PARAM;
   }
 
-  /* Check is the transition states are valid */
-  if (from_state == next_state) {
+  /* Check if the FSM states are valid */
+  if (present_state >= FSM_STATES_NUM_MAX || next_state >= FSM_STATES_NUM_MAX) {
     return FSM_ERR_INVALID_PARAM;
   }
 
-  /* Allocate memory for the new transition and check*/
-  fsm_trans_t *ptr =
-      realloc(me->trans_list.trans, (me->trans_list.len + 1) * sizeof *ptr);
-
-  if (ptr == NULL) {
-    return FSM_ERR_NO_MEM;
+  /* Check if the transition is valid */
+  if (present_state == next_state) {
+    return FSM_ERR_INVALID_PARAM;
   }
 
-  /* Assign the reallocated memory and add 1 to len */
-  me->trans_list.trans = ptr;
+  /* Check if the maximum transition number was reached */
+  if (me->trans_list.len >= FSM_TRANS_NUM_MAX) {
+    return FSM_ERR_TRANS_LIST_FULL;
+  }
+
+  /* Set states transition */
+  me->trans_list.trans[me->trans_list.len].present_state = present_state;
+  me->trans_list.trans[me->trans_list.len].next_state = next_state;
+
+  /* Set events default values */
+  me->trans_list.trans[me->trans_list.len].events.val = NULL;
+  me->trans_list.trans[me->trans_list.len].events.cmp = 0;
+  me->trans_list.trans[me->trans_list.len].events.eval = NULL;
+  me->trans_list.trans[me->trans_list.len].events.op = FSM_OP_AND;
+  me->trans_list.trans[me->trans_list.len].events.timeout = 0;
+
+  /* Set transition action default values */
+  me->trans_list.trans[me->trans_list.len].action.fn = NULL;
+  me->trans_list.trans[me->trans_list.len].action.arg = NULL;
+
+  /* Assign current transition to trans output parameter */
+  *trans = &me->trans_list.trans[me->trans_list.len];
+
+  /* Increment transitions list lenght */
   me->trans_list.len++;
 
-  /* Set the values for the new transition element */
-  size_t index = me->trans_list.len - 1;
-  me->trans_list.trans[index].events_list.events = NULL;
-  me->trans_list.trans[index].events_list.len = 0;
-  me->trans_list.trans[index].present_state = from_state;
-  me->trans_list.trans[index].next_state = next_state;
-  me->trans_list.trans[index].op = FSM_OP_AND; /* default operator */
-  me->trans_list.trans[index].action.fn = NULL;
-  me->trans_list.trans[index].action.arg = NULL;
-  me->trans_list.trans[index].timeout = 0;
-
-  /* Assign the last transition added to transition out parameter */
-  *trans = &me->trans_list.trans[index];
-
   /* Return success */
   return FSM_ERR_OK;
 }
 
-/**
- * @brief Function to set the operator to evaluate the transition events.
+ /**
+ * @brief Function to add the events and condition to perform a transition for a FSM instance.
  */
-fsm_err_t fsm_set_event_op(fsm_t *const me, fsm_trans_t *trans, fsm_op_t op) {
-  /* Check if the FSM operator is valid */
-  if (op < 0 || op >= FSM_OP_MAX) {
-    return FSM_ERR_INVALID_PARAM;
-  }
-
-  /* Set the new operator */
-  trans->op = op;
-
-  /* Return success */
-  return FSM_ERR_OK;
-}
-
-/**
- * @brief Function to add an event for a transition for a FSM instance.
- */
-fsm_err_t fsm_add_event_cmp(fsm_t *const me, fsm_trans_t *trans, int *val,
-                            int cmp, fsm_eval_t eval) {
+fsm_err_t fsm_set_events(fsm_t *const me, fsm_trans_t *trans, int *val,
+                            int cmp, fsm_eval_t eval, uint32_t timeout, fsm_op_t op)
+{
   /* Check if the FSM instance is valid */
   if (me == NULL) {
     return FSM_ERR_INVALID_PARAM;
@@ -153,70 +153,20 @@ fsm_err_t fsm_add_event_cmp(fsm_t *const me, fsm_trans_t *trans, int *val,
     return FSM_ERR_INVALID_PARAM;
   }
 
-  /* Check if the event value pointer is valid */
-  if (val == NULL) {
+  /* Check if the condition operator is valid */
+  if (op != FSM_OP_OR && op != FSM_OP_AND) {
     return FSM_ERR_INVALID_PARAM;
   }
 
-  /* Check if the evaluation function is valid */
-  if (eval == NULL) {
-    return FSM_ERR_INVALID_PARAM;
-  }
-
-  /* Check if the transition is part of the FSM */
-  fsm_trans_t *base = me->trans_list.trans;
-  size_t len = me->trans_list.len;
-  if (!(trans >= base && trans < base + len)) {
-    return FSM_ERR_FAIL;
-  }
-
-  /* Allocate memory for the new event and check */
-  fsm_event_t *ptr = realloc(trans->events_list.events,
-                             (trans->events_list.len + 1) * sizeof *ptr);
-
-  if (ptr == NULL) {
-    return FSM_ERR_NO_MEM;
-  }
-
-  /* Assign the reallocated memory and add 1 to len */
-  trans->events_list.events = ptr;
-  trans->events_list.len++;
-
-  /* Set the values for the new event element */
-  size_t index = trans->events_list.len - 1;
-  trans->events_list.events[index].val = val;
-  trans->events_list.events[index].cmp = cmp;
-  trans->events_list.events[index].eval = eval;
-
+  /**/
+  trans->events.val = val;
+  trans->events.cmp = cmp;
+  trans->events.eval = eval;
+  trans->events.timeout = timeout;
+  trans->events.op = op;
+  
   /* Return success */
-  return FSM_ERR_OK;
-}
-
-/**
- * @brief Function to add a timeout event for a transition for a FSM instance.
- */
-fsm_err_t fsm_add_event_timeout(fsm_t *const me, fsm_trans_t *trans,
-                                uint32_t timeout) {
-  /* Check if the FSM instance is valid */
-  if (me == NULL) {
-    return FSM_ERR_INVALID_PARAM;
-  }
-
-  /* Check if the transition pointer is valid */
-  if (trans == NULL) {
-    return FSM_ERR_INVALID_PARAM;
-  }
-
-  /* Check if the pointer to get ms is valid */
-  if (me->get_ms == NULL) {
-    return FSM_ERR_INVALID_PARAM;
-  }
-
-  /* Assign new tiemout */
-  trans->timeout = timeout;
-
-  /* Return success */
-  return FSM_ERR_OK;
+  return FSM_ERR_OK;                      
 }
 
 /**
@@ -254,25 +204,18 @@ fsm_err_t fsm_register_state_actions(fsm_t *const me, uint8_t state,
     return FSM_ERR_INVALID_PARAM;
   }
 
-  if (state >= me->actions_list.len) {
-    /* Allocate */
-    fsm_action_t(*ptr)[3] =
-        realloc(me->actions_list.actions, (state + 1) * sizeof *ptr);
-
-    if (ptr == NULL) {
-      return FSM_ERR_NO_MEM;
-    }
-
-    me->actions_list.actions = ptr;
-    me->actions_list.len = state + 1;
+  /* Check if the FSM state is valid */
+  if (state >= FSM_STATES_NUM_MAX) {
+    return FSM_ERR_INVALID_PARAM;
   }
 
-  me->actions_list.actions[state][FSM_ACTION_TYPE_ENTRY].fn = entry_fn;
-  me->actions_list.actions[state][FSM_ACTION_TYPE_ENTRY].arg = entry_arg;
-  me->actions_list.actions[state][FSM_ACTION_TYPE_UPDATE].fn = update_fn;
-  me->actions_list.actions[state][FSM_ACTION_TYPE_UPDATE].arg = update_arg;
-  me->actions_list.actions[state][FSM_ACTION_TYPE_EXIT].fn = exit_fn;
-  me->actions_list.actions[state][FSM_ACTION_TYPE_EXIT].arg = exit_arg;
+  /* Assign actions parameters */
+  me->state_actions[state][FSM_ACTION_TYPE_ENTRY].fn = entry_fn;
+  me->state_actions[state][FSM_ACTION_TYPE_ENTRY].arg = entry_arg;
+  me->state_actions[state][FSM_ACTION_TYPE_UPDATE].fn = update_fn;
+  me->state_actions[state][FSM_ACTION_TYPE_UPDATE].arg = update_arg;
+  me->state_actions[state][FSM_ACTION_TYPE_EXIT].fn = exit_fn;
+  me->state_actions[state][FSM_ACTION_TYPE_EXIT].arg = exit_arg;
 
   /* Return success */
   return FSM_ERR_OK;
@@ -295,20 +238,31 @@ fsm_err_t fsm_run(fsm_t *const me) {
   action */
   if (me->current_state != me->prev_state) {
     me->entry_ms = now_ms;
-    execute_action(me->current_state, &me->actions_list, FSM_ACTION_TYPE_ENTRY);
+    execute_action(me->current_state, me->state_actions, FSM_ACTION_TYPE_ENTRY);
     me->prev_state = me->current_state;
   } else {
-    execute_action(me->current_state, &me->actions_list,
+    execute_action(me->current_state, me->state_actions,
                    FSM_ACTION_TYPE_UPDATE);
   }
 
   /* Evaluate the transition event and get the next FSM state. If the current
   FSM state change then execute the exit action */
+  uint32_t elapsed_ms = FSM_TIMEOUT_MAX;
+
+  if (me->get_ms) {
+    if (now_ms < me->entry_ms) {
+      elapsed_ms = (FSM_TIMEOUT_MAX - me->entry_ms) + now_ms + 1;
+    }
+    else {
+      elapsed_ms = now_ms - me->entry_ms;
+    }
+  }
+  
   uint8_t next_state =
-      get_next_state(&me->trans_list, me->current_state, now_ms - me->entry_ms);
+      get_next_state(&me->trans_list, me->current_state, elapsed_ms);
 
   if (next_state != me->current_state) {
-    execute_action(me->current_state, &me->actions_list, FSM_ACTION_TYPE_EXIT);
+    execute_action(me->current_state, me->state_actions, FSM_ACTION_TYPE_EXIT);
     me->prev_state = me->current_state;
     me->current_state = next_state;
   }
@@ -319,35 +273,12 @@ fsm_err_t fsm_run(fsm_t *const me) {
 
 /* Private functions ---------------------------------------------------------*/
 static uint8_t get_next_state(fsm_trans_list_t *trans_list,
-                              uint8_t current_state, uint32_t elapsed_ms) {
-  for (size_t i = 0; i < trans_list->len; i++) {
+                              uint8_t current_state, uint32_t elapsed_ms) {  
+  for (uint8_t i = 0; i < trans_list->len; i++) {
     /* Find coincidences for current state */
     fsm_trans_t *trans = &trans_list->trans[i];
     if (trans->present_state == current_state) {
-      if (!trans->events_list.len && !trans->timeout) {
-        goto TRANSITION;
-      }
-
-      /* Set condition initial value according the operator */
-      bool res = 0;
-      bool cmp_res = 0;
-      bool timeout_res = 0;
-
-      /* Evaluate all transition events */
-      cmp_res = eval_events(trans);
-
-      /* Evalute timeout event */
-      timeout_res = eval_timeout(trans, elapsed_ms);
-
-      if (trans->op == FSM_OP_AND) {
-        res = cmp_res & timeout_res;
-      } else {
-        res = cmp_res | timeout_res;
-      }
-
-      if (res) {
-      TRANSITION:
-        /* Execute the transition action */
+      if (eval_events(&trans->events, elapsed_ms)) {
         if (trans->action.fn != NULL) {
           trans->action.fn(trans->action.arg);
         }
@@ -363,7 +294,7 @@ static uint8_t get_next_state(fsm_trans_list_t *trans_list,
 }
 
 static void execute_action(uint8_t current_state,
-                           fsm_actions_list_t *actions_list,
+                           fsm_action_t actions[][FSM_ACTION_TYPE_MAX],
                            fsm_action_type_t type) {
   /* Check if actions type is valid*/
   if (type < FSM_ACTION_TYPE_ENTRY || type >= FSM_ACTION_TYPE_MAX) {
@@ -371,46 +302,41 @@ static void execute_action(uint8_t current_state,
   }
 
   /* Check if the current FSM state callback was registered */
-  if (current_state < actions_list->len) {
-    if (actions_list->actions[current_state][type].fn != NULL) {
-      actions_list->actions[current_state][type].fn(
-          actions_list->actions[current_state][type].arg);
+  if (actions[current_state][type].fn != NULL) {
+    actions[current_state][type].fn(actions[current_state][type].arg);
+  }
+}
+
+static bool eval_events(const fsm_events_t *events, uint32_t elapsed_ms)
+{
+    if (events == NULL) {
+        return false;
     }
-  }
-}
 
-static bool eval_events(fsm_trans_t *trans) {
-  bool ret = trans->op == FSM_OP_AND ? 1 : 0;
+    // Definimos el elemento neutro según el operador
+    bool identity = (events->op == FSM_OP_AND) ? true : false;
 
-  if (!trans->events_list.len) {
-    return ret;
-  }
+    // ¿Está definida la comparación?
+    bool cmp_defined = (events->eval != NULL && events->val != NULL);
+    // ¿Está definido el timeout?
+    bool to_defined  = (events->timeout > 0);
 
-  for (size_t i = 0; i < trans->events_list.len; i++) {
-    fsm_event_t event = trans->events_list.events[i];
-    if (event.val != NULL) {
-      /* Perform the comparation */
-      if (trans->op == FSM_OP_AND) {
-        ret &= event.eval(*event.val, event.cmp);
-      } else {
-        ret |= event.eval(*event.val, event.cmp);
-      }
+    // Si está definido, lo evaluamos; si no, usamos el neutro
+    bool cmp_ok = cmp_defined
+                  ? events->eval(*(events->val), events->cmp)
+                  : identity;
+
+    bool to_ok  = to_defined
+                  ? (elapsed_ms >= events->timeout)
+                  : identity;
+
+    // Combinamos según AND u OR
+    if (events->op == FSM_OP_AND) {
+        return (cmp_ok && to_ok);
+    } else { // FSM_OP_OR
+        return (cmp_ok || to_ok);
     }
-  }
-
-  return ret;
 }
 
-static bool eval_timeout(fsm_trans_t *trans, uint32_t elapsed_time) {
-  bool ret = trans->op == FSM_OP_AND ? 1 : 0;
-
-  if (!trans->timeout) {
-    return ret;
-  }
-
-  ret = elapsed_time >= trans->timeout;
-
-  return ret;
-}
 
 /***************************** END OF FILE ************************************/
