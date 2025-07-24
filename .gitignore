@@ -63,3 +63,7 @@ dependencies.lock
 # Eclipse
 .project
 .cproject
+
+# Clang
+.clang-format
+.clangd
