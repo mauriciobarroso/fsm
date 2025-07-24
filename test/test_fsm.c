@@ -88,8 +88,9 @@ void test_timeout_transition_only(void) {
 	fsm_trans_t *trans = NULL;
 	fsm_init(&fsm, STATE_S0, get_fake_time);
 	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, cb_update_s0,
-		NULL, cb_exit_s0, NULL);
-	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL, cb_exit_s1, NULL);
+							   NULL, cb_exit_s0, NULL);
+	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL,
+							   cb_exit_s1, NULL);
 	fsm_add_transition(&fsm, &trans, STATE_S0, STATE_S1);
 	fsm_set_events(&fsm, trans, NULL, 0, NULL, 100, FSM_OP_AND);
 
@@ -118,8 +119,10 @@ void test_and_transition_with_timeout(void) {
 	fsm_trans_t *trans = NULL;
 	int var = 0;
 	fsm_init(&fsm, STATE_S0, get_fake_time);
-	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL, cb_exit_s0, NULL);
-	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL, cb_exit_s1, NULL);
+	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL,
+							   cb_exit_s0, NULL);
+	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL,
+							   cb_exit_s1, NULL);
 	fsm_add_transition(&fsm, &trans, STATE_S0, STATE_S1);
 	fsm_set_events(&fsm, trans, &var, 1, eval_eq, 50, FSM_OP_AND);
 	fsm_run(&fsm);
@@ -154,8 +157,10 @@ void test_or_transition_with_timeout(void) {
 	fsm_trans_t *trans = NULL;
 	int var = 0;
 	fsm_init(&fsm, STATE_S0, get_fake_time);
-	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL, cb_exit_s0, NULL);
-	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL, cb_exit_s1, NULL);
+	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL,
+							   cb_exit_s0, NULL);
+	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL,
+							   cb_exit_s1, NULL);
 	fsm_add_transition(&fsm, &trans, STATE_S0, STATE_S1);
 	fsm_set_events(&fsm, trans, &var, 1, eval_eq, 50, FSM_OP_OR);
 
@@ -169,8 +174,10 @@ void test_or_transition_with_timeout(void) {
 
 	setUp();
 	fsm_init(&fsm, STATE_S0, get_fake_time);
-	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL, cb_exit_s0, NULL);
-	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL, cb_exit_s1, NULL);
+	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL,
+							   cb_exit_s0, NULL);
+	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL,
+							   cb_exit_s1, NULL);
 	fsm_add_transition(&fsm, &trans, STATE_S0, STATE_S1);
 	fsm_set_events(&fsm, trans, &var, 1, eval_eq, 50, FSM_OP_OR);
 
@@ -187,8 +194,10 @@ void test_timeout_reset_on_reenter_state(void) {
 	fsm_t fsm;
 	fsm_trans_t *trans = NULL;
 	fsm_init(&fsm, STATE_S0, get_fake_time);
-	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL, cb_exit_s0, NULL);
-	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL, cb_exit_s1,NULL);
+	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL,
+							   cb_exit_s0, NULL);
+	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL,
+							   cb_exit_s1, NULL);
 	fsm_add_transition(&fsm, &trans, STATE_S0, STATE_S1);
 	fsm_set_events(&fsm, trans, NULL, 0, NULL, 20, FSM_OP_AND);
 	fsm_add_transition(&fsm, &trans, STATE_S1, STATE_S0);
@@ -202,8 +211,10 @@ void test_timeout_reset_on_reenter_state(void) {
 	fsm_run(&fsm);
 	setUp();
 	fsm_init(&fsm, STATE_S0, get_fake_time);
-	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL, cb_exit_s0, NULL);
-	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL, cb_exit_s1, NULL);
+	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL,
+							   cb_exit_s0, NULL);
+	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL,
+							   cb_exit_s1, NULL);
 	fsm_add_transition(&fsm, &trans, STATE_S0, STATE_S1);
 	fsm_set_events(&fsm, trans, NULL, 0, NULL, 20, FSM_OP_AND);
 
@@ -217,10 +228,13 @@ void test_multiple_timeouts_choose_earliest(void) {
 	fsm_t fsm;
 	fsm_trans_t *t1 = NULL, *t2 = NULL;
 	fsm_init(&fsm, STATE_S0, get_fake_time);
-	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL, cb_exit_s0, NULL);
-	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL, cb_exit_s1, NULL);
-	fsm_register_state_actions(&fsm, STATE_S2, cb_enter_s2, NULL, NULL, NULL, NULL, NULL);
-	
+	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL,
+							   cb_exit_s0, NULL);
+	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL,
+							   cb_exit_s1, NULL);
+	fsm_register_state_actions(&fsm, STATE_S2, cb_enter_s2, NULL, NULL, NULL,
+							   NULL, NULL);
+
 	fsm_add_transition(&fsm, &t1, STATE_S0, STATE_S1);
 	fsm_set_events(&fsm, t1, NULL, 0, NULL, 60, FSM_OP_AND);
 	fsm_add_transition(&fsm, &t2, STATE_S0, STATE_S2);
@@ -239,8 +253,10 @@ void test_large_time_jump(void) {
 	fsm_t fsm;
 	fsm_trans_t *trans = NULL;
 	fsm_init(&fsm, STATE_S0, get_fake_time);
-	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL, cb_exit_s0, NULL);
-	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL, NULL, NULL);
+	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL,
+							   cb_exit_s0, NULL);
+	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL,
+							   NULL, NULL);
 	fsm_add_transition(&fsm, &trans, STATE_S0, STATE_S1);
 	fsm_set_events(&fsm, trans, NULL, 0, NULL, 50, FSM_OP_AND);
 
@@ -257,8 +273,10 @@ void test_timeout_without_time_fn_does_not_crash(void) {
 	fsm_t fsm;
 	fsm_trans_t *trans = NULL;
 	fsm_init(&fsm, STATE_S0, NULL);
-	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL, cb_exit_s0, NULL);
-	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL, cb_exit_s1, NULL);
+	fsm_register_state_actions(&fsm, STATE_S0, cb_enter_s0, NULL, NULL, NULL,
+							   cb_exit_s0, NULL);
+	fsm_register_state_actions(&fsm, STATE_S1, cb_enter_s1, NULL, NULL, NULL,
+							   cb_exit_s1, NULL);
 	fsm_add_transition(&fsm, &trans, STATE_S0, STATE_S1);
 	fsm_set_events(&fsm, trans, NULL, 0, NULL, 50, FSM_OP_AND);
 
@@ -275,7 +293,8 @@ void test_register_action(void) {
 	fsm_trans_t *trans = NULL;
 	fsm_init(&fsm, STATE_S0, NULL);
 	fsm_add_transition(&fsm, &trans, STATE_S0, STATE_S2);
-	fsm_register_state_actions(&fsm, STATE_S2, cb_enter_s2, NULL, NULL, NULL, NULL, NULL);
+	fsm_register_state_actions(&fsm, STATE_S2, cb_enter_s2, NULL, NULL, NULL,
+							   NULL, NULL);
 
 	fsm_run(&fsm);
 	fsm_run(&fsm);
